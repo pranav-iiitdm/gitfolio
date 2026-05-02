@@ -10,3 +10,7 @@ build/
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Personal files
+My Resume.tex
+*.zip
