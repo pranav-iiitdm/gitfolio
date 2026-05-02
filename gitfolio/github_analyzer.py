@@ -1,7 +1,25 @@
+import time
 from github import Github, Auth
 from datetime import datetime, timedelta, timezone
 from gitfolio.config import Config
 from gitfolio.scorer import Scorer
+
+
+def _with_retry(fn, retries: int = 3, backoff: int = 2):
+    last_exc = None
+    for attempt in range(retries):
+        try:
+            return fn()
+        except Exception as e:
+            last_exc = e
+            if "rate limit" in str(e).lower() or "429" in str(e):
+                if attempt < retries - 1:
+                    sleep_time = backoff ** attempt
+                    print(f"   Rate limited. Retrying in {sleep_time}s...")
+                    time.sleep(sleep_time)
+                    continue
+            raise
+    raise last_exc
 
 
 class GitHubAnalyzer:
@@ -83,7 +101,7 @@ class GitHubAnalyzer:
         print(f"   Default branch: {default_branch}")
 
         try:
-            pulls = repo.get_pulls(state="closed", sort="updated", direction="desc", base=default_branch)
+            pulls = _with_retry(lambda: repo.get_pulls(state="closed", sort="updated", direction="desc", base=default_branch))
             matched = 0
             for i, pr in enumerate(pulls):
                 if i % 100 == 0 and i > 0:

@@ -36,3 +36,27 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: twine upload dist/*
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          TARBALL_URL="https://files.pythonhosted.org/packages/source/g/gitfolio/gitfolio-${VERSION}.tar.gz"
+
+          # Wait for PyPI to index the release
+          sleep 30
+
+          SHA256=$(curl -sL "$TARBALL_URL" | sha256sum | cut -d' ' -f1)
+
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/pranav-iiitdm/homebrew-tap.git
+          cd homebrew-tap
+
+          sed -i "s|url \".*\"|url \"${TARBALL_URL}\"|" gitfolio.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" gitfolio.rb
+
+          git config user.email "parimipranav@gmail.com"
+          git config user.name "gitfolio release bot"
+          git add gitfolio.rb
+          git commit -m "chore: update gitfolio to ${VERSION}"
+          git push

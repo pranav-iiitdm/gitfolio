@@ -150,5 +150,126 @@ def doctor():
     click.echo("")
 
 
+def _show_bullet(bullet: dict, idx: int, total: int) -> None:
+    cluster = bullet.get("cluster", {})
+    click.echo("─" * 52)
+    click.echo(f"[{idx}/{total}] {cluster.get('repo', 'unknown')} · {cluster.get('work_type', '?')} · score {bullet.get('score', 0):.0f}")
+    click.echo(f"PR: {cluster.get('pr_title', '')}\n")
+    click.echo(f"  {bullet.get('bullet', '')}\n")
+    if bullet.get("keywords"):
+        click.echo(f"  Keywords: {', '.join(bullet['keywords'])}")
+    if bullet.get("tier") == 2 and bullet.get("flag_reason"):
+        click.echo(f"  ⚠️  Tier 2 — {bullet['flag_reason']}")
+    click.echo("\n[a]pprove  [e]dit  [s]kip  [d]elete  [q]uit")
+    click.echo("─" * 52)
+
+
+@cli.command()
+@click.option("--push", "do_push", is_flag=True, help="Inject approved bullets and send email after review.")
+def review(do_push):
+    """Review pending bullets: approve, edit, skip, or delete."""
+    from gitfolio.pending_store import PendingStore
+    store = PendingStore()
+    bullets = [b for b in store.load() if b["status"] == "pending"]
+
+    if not bullets:
+        click.echo("\nNo pending bullets to review. Run `gitfolio sync` first.\n")
+        return
+
+    total = len(bullets)
+    for i, bullet in enumerate(bullets):
+        click.clear()
+        _show_bullet(bullet, i + 1, total)
+        while True:
+            choice = click.getchar().lower()
+            if choice == "a":
+                store.update(bullet["id"], status="approved")
+                click.echo("\n✅ Approved")
+                break
+            elif choice == "e":
+                edited = click.edit(bullet.get("bullet", ""))
+                if edited and edited.strip():
+                    store.update(bullet["id"], status="approved", bullet_text=edited.strip())
+                    click.echo("\n✅ Edited and approved")
+                else:
+                    store.update(bullet["id"], status="approved")
+                    click.echo("\n✅ Approved (no edits)")
+                break
+            elif choice == "s":
+                click.echo("\n⏭  Skipped")
+                break
+            elif choice == "d":
+                store.update(bullet["id"], status="deleted")
+                click.echo("\n🗑  Deleted")
+                break
+            elif choice == "q":
+                click.echo("\nReview paused. Run `gitfolio review` to continue.\n")
+                return
+
+    approved_count = len(store.get_approved())
+    click.echo(f"\nReview complete. {approved_count} bullet(s) approved.")
+    if approved_count == 0:
+        return
+    if do_push:
+        ctx = click.get_current_context()
+        ctx.invoke(push_cmd)
+    else:
+        click.echo("Run `gitfolio push` to inject them into your resume.\n")
+
+
+@cli.command(name="push")
+def push_cmd():
+    """Inject approved bullets into resume and send digest email."""
+    from gitfolio.pending_store import PendingStore
+    config = Config.load()
+    store = PendingStore()
+    approved = store.get_approved()
+
+    if not approved:
+        click.echo("\nNo approved bullets to push. Run `gitfolio review` first.\n")
+        return
+
+    click.echo(f"\n📝 Injecting {len(approved)} approved bullet(s) into resume...")
+    updater = ResumeUpdater(config)
+    updated_tex, diff_summary = updater.inject(approved)
+
+    click.echo("📧 Sending digest email...")
+    emailer = Emailer(config)
+    all_bullets = store.load()
+    tier1 = [b for b in approved if b.get("tier") == 1]
+    tier2 = [b for b in approved if b.get("tier") == 2]
+    tier3 = [b for b in all_bullets if b.get("tier") == 3 or b.get("status") == "deleted"]
+    emailer.send(
+        updated_tex=updated_tex,
+        tier1=tier1,
+        tier2=tier2,
+        tier3=tier3,
+        diff_summary=diff_summary,
+    )
+
+    store.clear()
+    Config.update_last_sync()
+    click.echo("\n✅ Done! Check your inbox for the digest + updated .tex file.\n")
+
+
+@cli.command()
+@click.option("--port", default=7842, show_default=True, help="Port for the web UI.")
+@click.option("--no-browser", is_flag=True, help="Don't open browser automatically.")
+def serve(port, no_browser):
+    """Start local web UI for reviewing bullets at localhost:<port>."""
+    import webbrowser
+    from gitfolio.server import create_app
+
+    url = f"http://localhost:{port}"
+    click.echo(f"\n🌐 Starting gitfolio web UI at {url}")
+    click.echo("Press Ctrl+C to stop.\n")
+
+    if not no_browser:
+        webbrowser.open(url)
+
+    app = create_app()
+    app.run(host="127.0.0.1", port=port, debug=False)
+
+
 def main():
     cli()

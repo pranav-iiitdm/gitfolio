@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="gitfolio",
-    version="0.1.0",
+    version="1.0.0",
     author="Pranav Parimi",
     description="Auto-generate ATS-friendly resume bullets from your GitHub commits",
     long_description=long_description,
