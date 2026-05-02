@@ -50,8 +50,10 @@ def init():
 @cli.command()
 @click.option("--backfill", is_flag=True, help="Scan last 12 months instead of last 7 days.")
 @click.option("--dry-run", is_flag=True, help="Preview bullets without updating resume or sending email.")
-def sync(backfill, dry_run):
-    """Fetch commits, generate bullets, update resume, send digest email."""
+@click.option("--auto", is_flag=True, help="Generate, inject, and email in one shot (use in cron).")
+def sync(backfill, dry_run, auto):
+    """Fetch commits, generate bullets, save to pending (or --auto to inject immediately)."""
+    from gitfolio.pending_store import PendingStore
     config = Config.load()
 
     click.echo("\n🔍 Fetching GitHub activity...")
@@ -81,22 +83,28 @@ def sync(backfill, dry_run):
         click.echo("\nDry run complete. No files modified, no email sent.\n")
         return
 
-    click.echo("📝 Updating resume...")
-    updater = ResumeUpdater(config)
-    updated_tex, diff_summary = updater.inject(tier1 + tier2)
+    if auto:
+        click.echo("📝 Updating resume...")
+        updater = ResumeUpdater(config)
+        updated_tex, diff_summary = updater.inject(tier1 + tier2)
 
-    click.echo("📧 Sending digest email...")
-    emailer = Emailer(config)
-    emailer.send(
-        updated_tex=updated_tex,
-        tier1=tier1,
-        tier2=tier2,
-        tier3=tier3,
-        diff_summary=diff_summary,
-    )
-
-    Config.update_last_sync()
-    click.echo("\n✅ Done! Check your inbox for the digest + updated .tex file.\n")
+        click.echo("📧 Sending digest email...")
+        emailer = Emailer(config)
+        emailer.send(
+            updated_tex=updated_tex,
+            tier1=tier1,
+            tier2=tier2,
+            tier3=tier3,
+            diff_summary=diff_summary,
+        )
+        Config.update_last_sync()
+        click.echo("\n✅ Done! Check your inbox for the digest + updated .tex file.\n")
+    else:
+        store = PendingStore()
+        store.save(results)
+        actionable = len(tier1) + len(tier2)
+        click.echo(f"\n📋 {actionable} bullet(s) saved to pending.")
+        click.echo("Run `gitfolio review` or `gitfolio serve` to review them.\n")
 
 
 @cli.command()

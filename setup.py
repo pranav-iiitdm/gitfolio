@@ -18,6 +18,7 @@ setup(
         "PyGithub>=2.1.0",
         "anthropic>=0.25.0",
         "PyYAML>=6.0",
+        "flask>=3.0",
     ],
     entry_points={
         "console_scripts": [
