@@ -40,7 +40,7 @@ jobs:
           TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          TARBALL_URL="https://files.pythonhosted.org/packages/source/g/gitfolio/gitfolio-${VERSION}.tar.gz"
+          TARBALL_URL="https://files.pythonhosted.org/packages/source/g/gitfolio-cli/gitfolio_cli-${VERSION}.tar.gz"
 
           # Wait for PyPI to index the release
           sleep 30

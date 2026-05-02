@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="gitfolio",
+    name="gitfolio-cli",
     version="1.0.0",
     author="Pranav Parimi",
     description="Auto-generate ATS-friendly resume bullets from your GitHub commits",
