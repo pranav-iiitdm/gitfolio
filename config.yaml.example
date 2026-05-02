@@ -1,0 +1,16 @@
+# gitfolio configuration
+# Run `gitfolio init` to generate this automatically
+
+github_token: "ghp_your_token_here"          # github.com/settings/tokens (repo scope)
+author_email: "you@example.com"               # your git commit email
+
+repos:
+  - "your-org/repo-name"
+  - "your-org/another-repo"
+
+email_from: "you@gmail.com"
+email_password: "your_gmail_app_password"     # use App Password, not your real password
+email_to: "you@gmail.com"
+
+resume_path: "/path/to/your/resume.tex"
+target_role: "SDE"                            # used to tune ATS keywords
