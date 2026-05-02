@@ -40,12 +40,13 @@ jobs:
           TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          TARBALL_URL="https://files.pythonhosted.org/packages/source/g/gitfolio-cli/gitfolio_cli-${VERSION}.tar.gz"
 
           # Wait for PyPI to index the release
           sleep 30
 
-          SHA256=$(curl -sL "$TARBALL_URL" | sha256sum | cut -d' ' -f1)
+          PYPI_JSON=$(curl -s "https://pypi.org/pypi/gitfolio-cli/${VERSION}/json")
+          TARBALL_URL=$(echo "$PYPI_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print([f for f in d['urls'] if f['packagetype']=='sdist'][0]['url'])")
+          SHA256=$(echo "$PYPI_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print([f for f in d['urls'] if f['packagetype']=='sdist'][0]['digests']['sha256'])")
 
           git clone https://x-access-token:${TAP_TOKEN}@github.com/pranav-iiitdm/homebrew-tap.git
           cd homebrew-tap
