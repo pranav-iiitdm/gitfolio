@@ -12,7 +12,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/pranav-iiitdm/gitfolio",
     packages=find_packages(),
-    python_requires=">=3.11",
+    python_requires=">=3.11,<4",
     install_requires=[
         "click>=8.1.0",
         "PyGithub>=2.1.0",
