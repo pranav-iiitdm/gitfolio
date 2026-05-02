@@ -12,12 +12,12 @@ def make_cluster(**kwargs):
         "type": "pr",
         "repo": "org/repo",
         "pr_title": "feat: add authentication",
-        "pr_body": "Implements JWT authentication with refresh tokens",
-        "commits": [{"message": "feat: add JWT auth", "sha": "abc", "date": "2026-01-01"}],
+        "pr_body": "",
+        "commits": [],
         "diff_sample": [],
-        "files_changed": 5,
-        "additions": 150,
-        "deletions": 10,
+        "files_changed": 0,
+        "additions": 0,
+        "deletions": 0,
         "reviews_given": 0,
     }
     base.update(kwargs)
@@ -25,7 +25,13 @@ def make_cluster(**kwargs):
 
 
 def test_feature_pr_scores_high(scorer):
-    cluster = make_cluster()
+    cluster = make_cluster(
+        pr_title="feat: add authentication",
+        pr_body="Implements JWT authentication with refresh tokens to improve security",
+        commits=[{"message": "feat: add JWT auth", "sha": "abc", "date": "2026-01-01"}],
+        files_changed=5,
+        additions=150,
+    )
     score = scorer.score(cluster)
     assert score >= 15
 
